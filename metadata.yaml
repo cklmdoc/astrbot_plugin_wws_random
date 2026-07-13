@@ -2,3 +2,4 @@ name: wws_random
 author: cklmdoc
 version: "1.0.0"
 description: 当群里有成员发送 "wws me recent" 时自动回复 "窝批"
+repo: https://github.com/cklmdoc/astrbot_plugin_wws_random
