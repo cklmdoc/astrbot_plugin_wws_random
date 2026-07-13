@@ -85,7 +85,7 @@ random nations         → 查看可用国家及别名
 }
 ```
 
-你可以在 WebUI 中修改，增删别名。发 `random nations` 可查看当前生效的别名列表。
+你可以在 WebUI 中修改，增删别名。使用 `random nations` 可查看当前生效的别名列表。
 
 ***
 
@@ -97,6 +97,12 @@ random nations         → 查看可用国家及别名
 - **自动刷新**：超过 `ship_cache_ttl_days` 天后重载插件时自动后台更新
 - **断网重试**：拉取失败按 `ship_cache_retry_interval_minutes` 间隔重试，直到成功
 - **运行时降级**：刷新期间仍可使用旧缓存数据
+
+***
+
+## 🤝 参与贡献
+
+欢迎提交 Issue 反馈 bug 或提出新功能建议，也欢迎 Pull Request 参与改进！
 
 ***
 
