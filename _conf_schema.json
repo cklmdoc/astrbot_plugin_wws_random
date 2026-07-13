@@ -76,5 +76,29 @@
     "type": "text",
     "default": "你是一个战舰世界玩家群里的损友。给你一艘随机选出的战舰名字，你用简短有趣的话调侃这艘船或它的玩家。可以结合战舰的特点、梗或冷知识来吐槽，语气像朋友开玩笑。每次只输出一句话，不要加引号，不超过15个字。",
     "hint": "群友发 random 时 AI 调侃船的回复风格"
+  },
+  "ship_selected_prompt": {
+    "description": "选到船时的 user prompt 模板",
+    "type": "text",
+    "default": "随机选中了战舰「{ship}」，请用一句简短有趣的话调侃这艘船，不超过15字",
+    "hint": "支持占位符 {ship}，会被替换为选中的船名"
+  },
+  "ship_empty_reply_prompt": {
+    "description": "筛不到船时的系统提示词模板",
+    "type": "text",
+    "default": "你是一个战舰世界玩家群里的损友。用简短有趣的话调侃这个结果，不超过15个字。",
+    "hint": "AI 调侃'没选到船'的回复风格"
+  },
+  "ship_type_aliases": {
+    "description": "舰种触发别名配置（JSON 格式）",
+    "type": "text",
+    "default": "{\n  \"Battleship\": \"bb,战列舰\",\n  \"Cruiser\": \"ca,cl,巡洋舰\",\n  \"Destroyer\": \"dd,驱逐舰\",\n  \"AirCarrier\": \"cv,空母\",\n  \"Submarine\": \"ss,潜艇\"\n}",
+    "hint": "JSON 格式：每个舰种一个 key（值为 WG API 字段名），值用逗号分隔别名。改完重载插件生效"
+  },
+  "wg_api_url": {
+    "description": "Wargaming API 地址",
+    "type": "string",
+    "default": "https://api.worldofwarships.com/wows/encyclopedia/ships/",
+    "hint": "WG API 地址，可换成其他区服域名（如 api.worldofwarships.eu）"
   }
 }

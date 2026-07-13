@@ -6,6 +6,7 @@ import astrbot.api.message_components as Comp
 import random, os, time, json, asyncio
 import aiohttp
 
+# 内置舰种别名映射（value 为 WG API 字段名），用户可通过 ship_type_aliases 配置覆盖/追加
 SHIP_TYPES = {
     "bb": "Battleship", "battleship": "Battleship", "战列舰": "Battleship",
     "ca": "Cruiser", "cruiser": "Cruiser", "cl": "Cruiser", "巡洋舰": "Cruiser",
@@ -14,6 +15,7 @@ SHIP_TYPES = {
     "ss": "Submarine", "submarine": "Submarine", "潜艇": "Submarine",
 }
 
+# 内置国家别名映射（value 为 WG API 字段名），用户可通过 nation_aliases 配置覆盖/追加
 NATIONS = {
     "us": "usa", "usa": "usa", "美": "usa", "美系": "usa",
     "jp": "japan", "japan": "japan", "日": "japan", "日系": "japan",
@@ -30,22 +32,6 @@ NATIONS = {
     "sp": "spain", "spain": "spain", "西": "spain", "西班牙": "spain",
 }
 
-DEFAULT_PROMPT = (
-    "你是一个爱整活的AI，围绕「窝批」两个字发挥创意，"
-    "生成简短、有趣、不重复的变体来调侃对方。"
-    "比如：窝批喵、超级窝批、唉窝批、窝批plus、窝批pro max、顶级窝批……"
-    "每次只输出一句话，不要加引号和其他格式，每次回复不要超过8个字。"
-)
-
-SHIP_DEFAULT_PROMPT = (
-    "你是一个战舰世界玩家群里的损友。"
-    "给你一艘随机选出的战舰名字，你用简短有趣的话调侃这艘船或它的玩家。"
-    "可以结合战舰的特点、梗或冷知识来吐槽，语气像朋友开玩笑。"
-    "每次只输出一句话，不要加引号，不超过15个字。"
-)
-
-WG_API_URL = "https://api.worldofwarships.com/wows/encyclopedia/ships/"
-
 
 class WwsMeRecentPlugin(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -55,6 +41,7 @@ class WwsMeRecentPlugin(Star):
         self._ships_cache_lock = asyncio.Lock()
         self._ships_file_path = os.path.join("data", "temp", "wws_ships.json")
         self._build_nation_aliases()
+        self._build_ship_type_aliases()
         asyncio.create_task(self._init_ship_cache())
 
     def _build_nation_aliases(self):
@@ -77,6 +64,27 @@ class WwsMeRecentPlugin(Star):
                     a = a.strip().lower()
                     if a:
                         self._alias_to_nation[a] = nation_key
+
+    def _build_ship_type_aliases(self):
+        """构建舰种别名映射表，合并内置默认与用户配置（用户配置覆盖同名 key）。"""
+        self._alias_to_ship_type = {}
+        for alias, ship_type in SHIP_TYPES.items():
+            self._alias_to_ship_type[alias.lower()] = ship_type
+        user_cfg = self.config.get("ship_type_aliases", {})
+        if isinstance(user_cfg, str):
+            user_cfg = user_cfg.strip()
+            if user_cfg:
+                try:
+                    user_cfg = json.loads(user_cfg)
+                except Exception as e:
+                    logger.warning(f"[wws] 解析 ship_type_aliases JSON 失败: {e}")
+                    user_cfg = {}
+        if isinstance(user_cfg, dict):
+            for ship_type_key, aliases_str in user_cfg.items():
+                for a in str(aliases_str).split(","):
+                    a = a.strip().lower()
+                    if a:
+                        self._alias_to_ship_type[a] = ship_type_key
 
     @filter.event_message_type(EventMessageType.ALL)
     async def on_message(self, event: AstrMessageEvent):
@@ -142,9 +150,11 @@ class WwsMeRecentPlugin(Star):
             if filters.get("tier"):
                 parts.append(f"等级={filters['tier']}级")
             cond_str = "、".join(parts) if parts else "无限制"
+            empty_sp_template = self.config.get("ship_empty_reply_prompt", "")
+            empty_sp = empty_sp_template.replace("{conditions}", cond_str) if "{conditions}" in empty_sp_template else empty_sp_template
             reply = await self._generate_tease_custom(
                 f"按条件「{cond_str}」一艘船都没筛到，请用一句话调侃这个结果",
-                system_prompt="你是一个战舰世界玩家群里的损友。用简短有趣的话调侃这个结果，不超过15个字。",
+                system_prompt=empty_sp or None,
             )
             yield event.plain_result(reply or "条件太苛刻了，哪有这种船，窝批")
             return
@@ -154,10 +164,12 @@ class WwsMeRecentPlugin(Star):
         image_url = ship.get("images", {}).get("large", "")
         logger.info(f"[wws] 随机选中: {name}")
 
-        ship_sp = self.config.get("ship_reply_prompt", SHIP_DEFAULT_PROMPT)
+        ship_sp = self.config.get("ship_reply_prompt", "")
+        selected_prompt_template = self.config.get("ship_selected_prompt", "")
+        selected_prompt = selected_prompt_template.replace("{ship}", name) if "{ship}" in selected_prompt_template else selected_prompt_template
         tease = await self._generate_tease_custom(
-            f"随机选中了战舰「{name}」，请用一句简短有趣的话调侃这艘船，不超过15字",
-            system_prompt=ship_sp,
+            selected_prompt,
+            system_prompt=ship_sp or None,
         )
 
         text = f"{name}：{tease or name}"
@@ -176,8 +188,8 @@ class WwsMeRecentPlugin(Star):
                 if 1 <= t <= 11:
                     filters["tier"] = t
                     continue
-            if token in SHIP_TYPES:
-                filters["type"] = SHIP_TYPES[token]
+            if token in self._alias_to_ship_type:
+                filters["type"] = self._alias_to_ship_type[token]
                 continue
             if token in self._alias_to_nation:
                 filters["nation"] = self._alias_to_nation[token]
@@ -210,12 +222,13 @@ class WwsMeRecentPlugin(Star):
 
     async def _fetch_ships_from_api(self, app_id: str) -> list[dict]:
         lang = self.config.get("ship_name_language", "zh-cn")
+        api_url = self.config.get("wg_api_url", "https://api.worldofwarships.com/wows/encyclopedia/ships/")
         limit, page_no, all_ships = 100, 1, []
         async with aiohttp.ClientSession() as session:
             while True:
                 params = {"application_id": app_id, "language": lang, "limit": limit, "page_no": page_no}
                 try:
-                    async with session.get(WG_API_URL, params=params, timeout=aiohttp.ClientTimeout(total=30)) as resp:
+                    async with session.get(api_url, params=params, timeout=aiohttp.ClientTimeout(total=30)) as resp:
                         if resp.status != 200:
                             logger.error(f"[wws] WG API 返回 HTTP {resp.status}")
                             break
@@ -349,7 +362,7 @@ body{background:#0f172a;padding:20px;font-family:-apple-system,'PingFang SC','Mi
             prov = self.context.get_using_provider()
             if not prov:
                 return default or "窝批"
-            sp = system_prompt or self.config.get("reply_prompt", DEFAULT_PROMPT)
+            sp = system_prompt or self.config.get("reply_prompt", "")
             logger.info(f"[wws] LLM prompt: {prompt[:60]}...")
             resp = await prov.text_chat(prompt=prompt, contexts=[], system_prompt=sp)
             if resp:
