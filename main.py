@@ -148,6 +148,16 @@ class WwsMeRecentPlugin(Star):
         filters = self._parse_ship_filters(remainder)
         logger.info(f"[wws] 随机选船筛选条件: {filters}")
 
+        if filters.get("invalid"):
+            bad = "、".join(filters["invalid"])
+            tip = (
+                f"⚠️ 不认识「{bad}」是啥，没法选，窝批\n"
+                "💡 用法：random [舰种] [国家] [等级]\n"
+                "   例：random bb 日 x  /  random dd us 6"
+            )
+            yield event.plain_result(tip)
+            return
+
         ships = await self._get_ships(app_id)
         if not ships:
             yield event.plain_result("WG 服务器在摸鱼，选不了船，窝批")
@@ -193,7 +203,7 @@ class WwsMeRecentPlugin(Star):
             yield event.plain_result(text)
 
     def _parse_ship_filters(self, text: str) -> dict:
-        filters = {"type": None, "nation": None, "tier": None}
+        filters = {"type": None, "nation": None, "tier": None, "invalid": []}
         if not text:
             return filters
         for token in text.lower().split():
@@ -211,6 +221,7 @@ class WwsMeRecentPlugin(Star):
             if token in self._alias_to_nation:
                 filters["nation"] = self._alias_to_nation[token]
                 continue
+            filters["invalid"].append(token)
         return filters
 
     async def _get_ships(self, app_id: str) -> list[dict]:
