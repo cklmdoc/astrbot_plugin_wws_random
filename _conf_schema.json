@@ -23,6 +23,18 @@
     "default": ["wws me recent"],
     "hint": "群友发这些关键词之一时触发回复，每行一个词"
   },
+  "reply_probability": {
+    "description": "回复概率 (%)",
+    "type": "int",
+    "default": 100,
+    "hint": "设为 30 表示 30% 概率回复，100 为必回"
+  },
+  "reply_prompt": {
+    "description": "窝批调教版系统提示词",
+    "type": "text",
+    "default": "你是一个爱整活的AI，围绕「窝批」两个字发挥创意，生成简短、有趣、不重复的变体来调侃对方。比如：窝批喵、超级窝批、唉窝批、窝批plus、窝批pro max、顶级窝批……每次只输出一句话，不要加引号和其他格式，每次回复不要超过8个字。",
+    "hint": "群友发 trigger_keyword 时 AI 的回复风格"
+  },
   "random_trigger": {
     "description": "随机选船触发词",
     "type": "string",
@@ -34,6 +46,12 @@
     "type": "string",
     "default": "",
     "hint": "在 https://developers.wargaming.net 注册获取，留空禁用随机选船"
+  },
+  "wg_api_url": {
+    "description": "Wargaming API 地址",
+    "type": "string",
+    "default": "https://api.worldofwarships.com/wows/encyclopedia/ships/",
+    "hint": "WG API 地址，可换成其他区服域名（如 api.worldofwarships.eu）"
   },
   "ship_name_language": {
     "description": "船名语言",
@@ -53,29 +71,17 @@
     "default": 5,
     "hint": "拉取 WG API 失败后，每 N 分钟重试一次直到成功"
   },
+  "ship_type_aliases": {
+    "description": "舰种触发别名配置（JSON 格式）",
+    "type": "text",
+    "default": "{\n  \"Battleship\": \"bb,战列舰\",\n  \"Cruiser\": \"ca,cl,巡洋舰\",\n  \"Destroyer\": \"dd,驱逐舰\",\n  \"AirCarrier\": \"cv,空母\",\n  \"Submarine\": \"ss,潜艇\"\n}",
+    "hint": "JSON 格式：每个舰种一个 key（值为 WG API 字段名），值用逗号分隔别名。改完重载插件生效"
+  },
   "nation_aliases": {
     "description": "各国触发别名配置（JSON 格式）",
     "type": "text",
     "default": "{\n  \"usa\": \"美国\",\n  \"japan\": \"日本\",\n  \"germany\": \"德国\",\n  \"uk\": \"英国\",\n  \"france\": \"法国\",\n  \"italy\": \"意大利\",\n  \"ussr\": \"苏联\",\n  \"pan_asia\": \"泛亚\",\n  \"europe\": \"泛欧\",\n  \"commonwealth\": \"联邦\",\n  \"netherlands\": \"荷兰\",\n  \"spain\": \"西班牙\",\n  \"pan_america\": \"泛美\"\n}",
     "hint": "JSON 格式：每个国家一个 key，值用逗号分隔别名。改完重载插件生效"
-  },
-  "reply_probability": {
-    "description": "回复概率 (%)",
-    "type": "int",
-    "default": 100,
-    "hint": "设为 30 表示 30% 概率回复，100 为必回"
-  },
-  "reply_prompt": {
-    "description": "窝批调教版系统提示词",
-    "type": "text",
-    "default": "你是一个爱整活的AI，围绕「窝批」两个字发挥创意，生成简短、有趣、不重复的变体来调侃对方。比如：窝批喵、超级窝批、唉窝批、窝批plus、窝批pro max、顶级窝批……每次只输出一句话，不要加引号和其他格式，每次回复不要超过8个字。",
-    "hint": "群友发 trigger_keyword 时 AI 的回复风格"
-  },
-  "ship_reply_prompt": {
-    "description": "随机选船调教版系统提示词",
-    "type": "text",
-    "default": "你是一个战舰世界玩家群里的损友。给你一艘随机选出的战舰名字，你用简短有趣的话调侃这艘船或它的玩家。可以结合战舰的特点、梗或冷知识来吐槽，语气像朋友开玩笑。每次只输出一句话，不要加引号，不超过15个字。",
-    "hint": "群友发 random 时 AI 调侃船的回复风格"
   },
   "ship_selected_prompt": {
     "description": "选到船时的 user prompt 模板",
@@ -83,22 +89,16 @@
     "default": "随机选中了战舰「{ship}」，请用一句简短有趣的话调侃这艘船，不超过15字",
     "hint": "支持占位符 {ship}，会被替换为选中的船名"
   },
+  "ship_reply_prompt": {
+    "description": "随机选船调教版系统提示词",
+    "type": "text",
+    "default": "你是一个战舰世界玩家群里的损友。给你一艘随机选出的战舰名字，你用简短有趣的话调侃这艘船或它的玩家。可以结合战舰的特点、梗或冷知识来吐槽，语气像朋友开玩笑。每次只输出一句话，不要加引号，不超过15个字。",
+    "hint": "群友发 random 时 AI 调侃船的回复风格"
+  },
   "ship_empty_reply_prompt": {
     "description": "筛不到船时的系统提示词模板",
     "type": "text",
     "default": "你是一个战舰世界玩家群里的损友。用简短有趣的话调侃这个结果，不超过15个字。",
     "hint": "AI 调侃'没选到船'的回复风格"
-  },
-  "ship_type_aliases": {
-    "description": "舰种触发别名配置（JSON 格式）",
-    "type": "text",
-    "default": "{\n  \"Battleship\": \"bb,战列舰\",\n  \"Cruiser\": \"ca,cl,巡洋舰\",\n  \"Destroyer\": \"dd,驱逐舰\",\n  \"AirCarrier\": \"cv,空母\",\n  \"Submarine\": \"ss,潜艇\"\n}",
-    "hint": "JSON 格式：每个舰种一个 key（值为 WG API 字段名），值用逗号分隔别名。改完重载插件生效"
-  },
-  "wg_api_url": {
-    "description": "Wargaming API 地址",
-    "type": "string",
-    "default": "https://api.worldofwarships.com/wows/encyclopedia/ships/",
-    "hint": "WG API 地址，可换成其他区服域名（如 api.worldofwarships.eu）"
   }
 }
