@@ -32,6 +32,12 @@ NATIONS = {
     "sp": "spain", "spain": "spain", "西": "spain", "西班牙": "spain",
 }
 
+# 罗马数字 → 等级映射表（大小写不敏感，token 已统一 lower），保留字禁止用作舰种/国家别名
+ROMAN_TO_TIER = {
+    "i": 1, "ii": 2, "iii": 3, "iv": 4, "v": 5,
+    "vi": 6, "vii": 7, "viii": 8, "ix": 9, "x": 10, "xi": 11,
+}
+
 
 class WwsMeRecentPlugin(Star):
     def __init__(self, context: Context, config: AstrBotConfig = None):
@@ -62,8 +68,12 @@ class WwsMeRecentPlugin(Star):
             for nation_key, aliases_str in user_cfg.items():
                 for a in str(aliases_str).split(","):
                     a = a.strip().lower()
-                    if a:
-                        self._alias_to_nation[a] = nation_key
+                    if not a:
+                        continue
+                    if a in ROMAN_TO_TIER:
+                        logger.warning(f"[wws] 国家别名「{a}」是罗马数字保留字，已跳过（不可用作别名）")
+                        continue
+                    self._alias_to_nation[a] = nation_key
 
     def _build_ship_type_aliases(self):
         """构建舰种别名映射表，合并内置默认与用户配置（用户配置覆盖同名 key）。"""
@@ -83,8 +93,12 @@ class WwsMeRecentPlugin(Star):
             for ship_type_key, aliases_str in user_cfg.items():
                 for a in str(aliases_str).split(","):
                     a = a.strip().lower()
-                    if a:
-                        self._alias_to_ship_type[a] = ship_type_key
+                    if not a:
+                        continue
+                    if a in ROMAN_TO_TIER:
+                        logger.warning(f"[wws] 舰种别名「{a}」是罗马数字保留字，已跳过（不可用作别名）")
+                        continue
+                    self._alias_to_ship_type[a] = ship_type_key
 
     @filter.event_message_type(EventMessageType.ALL)
     async def on_message(self, event: AstrMessageEvent):
@@ -188,6 +202,9 @@ class WwsMeRecentPlugin(Star):
                 if 1 <= t <= 11:
                     filters["tier"] = t
                     continue
+            if token in ROMAN_TO_TIER:
+                filters["tier"] = ROMAN_TO_TIER[token]
+                continue
             if token in self._alias_to_ship_type:
                 filters["type"] = self._alias_to_ship_type[token]
                 continue
